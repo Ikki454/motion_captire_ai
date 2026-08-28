@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "rig_id": "rigify",
+  "display_name": "Rigify (control rig)",
+  "up_axis": "Z",
+  "unit_scale": 1.0,
+  "bone_map": {
+    "spine": "spine.002",
+    "neck": "spine.004",
+    "head": "spine.006",
+    "left_clavicle": "shoulder.L",
+    "right_clavicle": "shoulder.R",
+    "left_upper_arm": "upper_arm.L",
+    "left_lower_arm": "forearm.L",
+    "right_upper_arm": "upper_arm.R",
+    "right_lower_arm": "forearm.R",
+    "left_upper_leg": "thigh.L",
+    "left_lower_leg": "shin.L",
+    "left_foot": "foot.L",
+    "right_upper_leg": "thigh.R",
+    "right_lower_leg": "shin.R",
+    "right_foot": "foot.R"
+  }
+}

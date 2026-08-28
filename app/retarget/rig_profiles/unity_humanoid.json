@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "rig_id": "unity_humanoid",
+  "display_name": "Unity Humanoid",
+  "up_axis": "Y",
+  "unit_scale": 1.0,
+  "bone_map": {
+    "spine": "Spine",
+    "neck": "Neck",
+    "head": "Head",
+    "left_clavicle": "LeftShoulder",
+    "right_clavicle": "RightShoulder",
+    "left_upper_arm": "LeftUpperArm",
+    "left_lower_arm": "LeftLowerArm",
+    "right_upper_arm": "RightUpperArm",
+    "right_lower_arm": "RightLowerArm",
+    "left_upper_leg": "LeftUpperLeg",
+    "left_lower_leg": "LeftLowerLeg",
+    "left_foot": "LeftFoot",
+    "right_upper_leg": "RightUpperLeg",
+    "right_lower_leg": "RightLowerLeg",
+    "right_foot": "RightFoot"
+  }
+}

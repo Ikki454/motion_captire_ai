@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "rig_id": "canonical",
+  "display_name": "Canonical skeleton",
+  "up_axis": "Y",
+  "unit_scale": 1.0,
+  "bone_map": {
+    "spine": "spine",
+    "neck": "neck",
+    "head": "head",
+    "left_clavicle": "left_clavicle",
+    "right_clavicle": "right_clavicle",
+    "left_upper_arm": "left_upper_arm",
+    "left_lower_arm": "left_lower_arm",
+    "right_upper_arm": "right_upper_arm",
+    "right_lower_arm": "right_lower_arm",
+    "left_hip": "left_hip",
+    "right_hip": "right_hip",
+    "left_upper_leg": "left_upper_leg",
+    "left_lower_leg": "left_lower_leg",
+    "left_foot": "left_foot",
+    "right_upper_leg": "right_upper_leg",
+    "right_lower_leg": "right_lower_leg",
+    "right_foot": "right_foot"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "rig_id": "mixamo",
+  "display_name": "Mixamo",
+  "up_axis": "Y",
+  "unit_scale": 0.01,
+  "bone_map": {
+    "spine": "mixamorig:Spine1",
+    "neck": "mixamorig:Neck",
+    "head": "mixamorig:Head",
+    "left_clavicle": "mixamorig:LeftShoulder",
+    "right_clavicle": "mixamorig:RightShoulder",
+    "left_upper_arm": "mixamorig:LeftArm",
+    "left_lower_arm": "mixamorig:LeftForeArm",
+    "right_upper_arm": "mixamorig:RightArm",
+    "right_lower_arm": "mixamorig:RightForeArm",
+    "left_upper_leg": "mixamorig:LeftUpLeg",
+    "left_lower_leg": "mixamorig:LeftLeg",
+    "left_foot": "mixamorig:LeftFoot",
+    "right_upper_leg": "mixamorig:RightUpLeg",
+    "right_lower_leg": "mixamorig:RightLeg",
+    "right_foot": "mixamorig:RightFoot"
+  }
+}
