@@ -34,6 +34,30 @@ this format — there is no second-class citizen.
 | `rotation_offsets` | `{canonical: [w,x,y,z]}`    | *(optional)* rest-pose difference, applied as `offset · canonical_local` |
 | `unit_scale`       | number                      | metres per rig unit; scales the **root translation**. Mixamo uses `0.01`. Default `1.0` |
 | `up_axis`          | `"Y"` \| `"Z"`              | *(informational in v1)* recorded but not applied — the Y-up → Z-up conversion happens only in `blender_addon/conversion.py`. Default `"Y"` |
+| `attachment_points`| `{slot: rig bone}`          | *(optional)* where extra bone chains hang off the rig. **Nothing drives these yet** — see below |
+
+### `attachment_points`
+
+The canonical skeleton has 17 bones. A game rig has far more — fingers, toes,
+extra spine segments. Those cannot be mapped to a canonical role because
+**no capture backend feeds them**: `PoseLandmarker` returns 33 body landmarks,
+of which the hand gets only `wrist`, `index`, `pinky` and `thumb`.
+
+Rather than pretend otherwise, the profile records *where such a chain attaches*:
+
+```json
+"attachment_points": { "left_hand": "hand.L", "right_hand": "hand.R" }
+```
+
+One entry stands in for a whole chain — `hand.L` reaches the fifteen finger bones
+below it. Known slots are `left_hand` and `right_hand`. Slot names are **not**
+validated: a later backend may add slots this version has never heard of, and an
+older reader must not reject a profile over one.
+
+`retarget_issues` reports these as *recorded but not driven*, so the gap is
+visible rather than silent. MediaPipe does ship `HolisticLandmarker` and
+`HandLandmarker`, so driving them is a matter of adding a backend and extending
+the canonical skeleton — a separate piece of work.
 
 A **partial** `bone_map` is valid and normal. Canonical bones with no entry are
 simply left out of the `RigClip`, and `retarget_issues` reports them. Real rigs
@@ -138,5 +162,28 @@ So when both thighs share a parent, neither hip is inferred:
 | Sided pelvis | `plevis.L` | `plevis.R` | both hips placed |
 | Mixamo, Unreal | `Hips` | `Hips` | neither placed, `Hips` left free |
 
-A hip already matched by name is never overridden. Without `parent` data the
-pass does not run, so `auto_map(bone_names)` behaves exactly as before.
+A hip already matched by name is never overridden, and the armature root is
+refused outright — a hip hangs off a pelvis or a spine, never off the top of the
+hierarchy. (Without that second guard, a rig with a single leg modelled would
+slip past the shared-parent check.) Without `parent` data the pass does not run,
+so `auto_map(bone_names)` behaves exactly as before.
+
+### Grouping the leftover chains
+
+`detect_bone_groups(bone_names, parents, mapping)` folds every unmapped bone into
+the chain it belongs to. A group starts at an unmapped bone whose parent *is*
+mapped, and holds that bone plus its descendants, stopping at any mapped bone. A
+group whose root has three or more child chains is classified as `fingers` and
+becomes an attachment point; the rest are plain chains.
+
+Bones *above* the mapped skeleton (an armature root, a pelvis every mapped bone
+descends from) are not grouped — they have no attachment point.
+
+On a real 56-bone metarig this accounts for every bone:
+
+| | Count |
+|---|---:|
+| Mapped to a canonical role | 17 |
+| In chains (`hand.L` 16, `hand.R` 16, `spine.002` 3, `toe.L` 1, `toe.R` 1) | 37 |
+| Above the skeleton (`Root`, `plevis`) | 2 |
+| **Total** | **56** |

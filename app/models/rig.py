@@ -33,11 +33,29 @@ class Rig:
 
 @dataclass
 class RetargetMap:
-    """How canonical bones map onto a specific rig's bones."""
+    """How canonical bones map onto a specific rig's bones.
+
+    ``bone_map`` holds the *primary* rig bone per canonical role, which is
+    what the exported ``bone_map`` and the coverage report use.
+    ``bone_chains`` holds the full run when a role is played by several
+    bones -- a four-segment spine where the canonical skeleton has one.
+    """
 
     rig_id: str
     bone_map: dict[CanonicalBoneName, str] = field(default_factory=dict)
     rotation_offsets: dict[CanonicalBoneName, Quaternion] = field(default_factory=dict)
+    bone_chains: dict[CanonicalBoneName, tuple[str, ...]] = field(default_factory=dict)
+
+    def rig_bones_for(self, canonical: CanonicalBoneName) -> tuple[str, ...]:
+        """Return every rig bone playing ``canonical``, primary first."""
+
+        chain = self.bone_chains.get(canonical)
+        if chain:
+            return chain
+
+        primary = self.bone_map.get(canonical)
+
+        return (primary,) if primary else ()
 
     def rig_bone_for(self, canonical: CanonicalBoneName) -> str | None:
         """Return the rig bone name for ``canonical``, or ``None``."""

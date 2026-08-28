@@ -13,20 +13,26 @@ def retarget(
 ) -> RigClip:
     """Produce a :class:`RigClip` for ``rig`` from ``skeleton_clip``.
 
-    Each canonical bone in ``retarget_map.bone_map`` contributes a rotation
-    curve for the mapped rig bone: ``offset * canonical_local_rotation``.
-    The root translation is scaled by ``rig.unit_scale``. Canonical bones
-    that are not mapped are left out; rig bones with no canonical source
-    keep their rest pose.
+    Each canonical bone contributes a rotation curve for the rig bone(s)
+    playing it: ``offset * canonical_local_rotation``. The root translation
+    is scaled by ``rig.unit_scale``. Canonical bones that are not mapped are
+    left out; rig bones with no canonical source keep their rest pose.
+
+    When a role is played by a **run** of rig bones -- a four-segment spine
+    against the canonical skeleton's single one -- the rotation is split
+    equally between them. The parts compose back to the whole rotation, so
+    the end orientation is unchanged, but the chain curves through its
+    length instead of hinging at the first joint. The rest-pose ``offset``
+    is applied once, to the primary bone.
     """
 
-    ordered_pairs: list[tuple[CanonicalBoneName, str]] = [
-        (bone.name, retarget_map.bone_map[bone.name])
+    ordered_chains: list[tuple[CanonicalBoneName, tuple[str, ...]]] = [
+        (bone.name, retarget_map.rig_bones_for(bone.name))
         for bone in skeleton_clip.skeleton.bones
-        if bone.name in retarget_map.bone_map
+        if retarget_map.rig_bones_for(bone.name)
     ]
 
-    bone_order = [rig_name for _, rig_name in ordered_pairs]
+    bone_order = [name for _, chain in ordered_chains for name in chain]
     bone_curves: dict[str, list[Quaternion]] = {name: [] for name in bone_order}
     root_curve = []
     frame_indices = []
@@ -35,12 +41,20 @@ def retarget(
         frame_indices.append(pose.frame_index)
         root_curve.append(scale(pose.root_translation, rig.unit_scale))
 
-        for canonical_bone, rig_name in ordered_pairs:
+        for canonical_bone, chain in ordered_chains:
             canonical_rotation = pose.bone_rotations.get(
                 canonical_bone, Quaternion.identity()
             )
             offset = retarget_map.offset_for(canonical_bone)
-            bone_curves[rig_name].append(offset.multiply(canonical_rotation))
+
+            if len(chain) == 1:
+                bone_curves[chain[0]].append(offset.multiply(canonical_rotation))
+                continue
+
+            share = canonical_rotation.scaled(1.0 / len(chain))
+            bone_curves[chain[0]].append(offset.multiply(share))
+            for rig_name in chain[1:]:
+                bone_curves[rig_name].append(share)
 
     return RigClip(
         rig_id=rig.rig_id,
@@ -69,7 +83,7 @@ def retarget_issues(
     unmapped = [
         bone.name.value
         for bone in skeleton_clip.skeleton.bones
-        if bone.name not in retarget_map.bone_map
+        if not retarget_map.rig_bones_for(bone.name)
     ]
 
     if unmapped:

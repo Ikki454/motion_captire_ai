@@ -5,7 +5,7 @@ Desktop application for converting human movement from video into animation data
 ## Current Status
 
 Roadmap phases 1–17 complete, plus the UI redesign and custom rig profiles
-(see `docs/roadmap.md`). 349 tests.
+(see `docs/roadmap.md`). 363 tests.
 
 ## Run
 
@@ -44,6 +44,12 @@ To retarget onto your own armature instead of the bundled `canonical` / `mixamo`
 profiles are stored in `~/.ai-motion-capture/rigs/`, and the one a project uses is
 copied into `<project>.mcap/rigs/` so the project stays portable. Format:
 `docs/formats/rig_profile_v1.md`.
+
+Bones the canonical skeleton has no role for — fingers, toes, extra spine segments —
+are folded into chains and reported rather than listed one by one. A hand's finger
+chains become a single **attachment point** you confirm once. Nothing drives those
+bones today (the pose detector returns no finger data); they keep their rest pose on
+import, and the retarget report says so explicitly.
 
 ## Main Goal
 

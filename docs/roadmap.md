@@ -216,3 +216,26 @@ Retarget onto a rig the app was not shipped with. Format spec:
       15/17 to **17/17**, including a `plevis.L` misspelling no name rule could match.
 - [x] `CustomRigDialog` accounts for every armature bone: N of M unmapped, listed in the
       label with the full set in a tooltip. Nothing is silently dropped.
+
+### Rig-aware import: bone chains and attachment points  ✅ done 2026-08-28
+
+The rig drives the **UI and the reporting**, not the capture — the canonical
+skeleton and the detector are untouched, so keypoints still never depend on a rig's
+bone names (`CLAUDE.md`, ADR 3).
+
+- [x] `detect_bone_groups` folds unmapped bones into the chains they form, stopping at
+      the next mapped bone; a root with 3+ child chains is classified as `fingers`.
+      Bones above the mapped skeleton are left ungrouped.
+- [x] `attachment_points` in the rig profile (`{slot: rig bone}`, slots not validated so a
+      later backend can add its own). `Rig.attachment_points` + `attachment_point(slot)`.
+- [x] `CustomRigDialog` shows one "Attachment points" row per finger group instead of
+      thirty finger rows, and summarises the rest by chain
+      ("39 of 56 keep their rest pose - 5 chain(s): hand.L (16), ...").
+- [x] `retarget_issues(clip, map, rig)` now separates two different gaps: canonical bones
+      the rig lacks, and attachment points **no capture backend drives yet**.
+- [x] Second hip guard: the armature root can never be a hip (a one-legged rig used to
+      slip past the shared-parent check).
+- [x] Deliberately **not** done: driving the fingers. That needs a `HolisticLandmarker`
+      backend plus finger bones in the canonical skeleton (17 → ~47), which would touch the
+      solver, mcapclip, BVH export and every rig profile. MediaPipe 1.0.1 does ship
+      `HolisticLandmarker` / `HandLandmarker`, so the path is open when wanted.

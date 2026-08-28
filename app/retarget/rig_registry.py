@@ -267,10 +267,23 @@ def _parse_document(
         rig_id = str(document["rig_id"])
         raw_bone_map = document["bone_map"]
 
-        bone_map = {
-            CanonicalBoneName(canonical): str(rig_bone)
-            for canonical, rig_bone in raw_bone_map.items()
-        }
+        # A value may be one bone or a run of them: a rig whose spine is
+        # four segments plays one canonical role with all four.
+        bone_map: dict[CanonicalBoneName, str] = {}
+        bone_chains: dict[CanonicalBoneName, tuple[str, ...]] = {}
+
+        for canonical, rig_bone in raw_bone_map.items():
+            key = CanonicalBoneName(canonical)
+
+            if isinstance(rig_bone, (list, tuple)):
+                chain = tuple(str(name) for name in rig_bone if str(name).strip())
+                if not chain:
+                    continue
+                bone_map[key] = chain[0]
+                if len(chain) > 1:
+                    bone_chains[key] = chain
+            else:
+                bone_map[key] = str(rig_bone)
         rotation_offsets = {
             CanonicalBoneName(canonical): Quaternion(
                 float(values[0]),
@@ -295,10 +308,19 @@ def _parse_document(
         display_name=str(document.get("display_name", rig_id)),
         up_axis=str(document.get("up_axis", "Y")),
         unit_scale=float(document.get("unit_scale", 1.0)),
-        rig_bone_names=tuple(bone_map.values()),
+        rig_bone_names=tuple(
+            dict.fromkeys(
+                name
+                for canonical, primary in bone_map.items()
+                for name in bone_chains.get(canonical, (primary,))
+            )
+        ),
         attachment_points=attachment_points,
     )
     retarget_map = RetargetMap(
-        rig_id=rig_id, bone_map=bone_map, rotation_offsets=rotation_offsets
+        rig_id=rig_id,
+        bone_map=bone_map,
+        rotation_offsets=rotation_offsets,
+        bone_chains=bone_chains,
     )
     return rig, retarget_map

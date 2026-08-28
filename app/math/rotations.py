@@ -56,6 +56,18 @@ class Quaternion:
         rotated = self.to_rotation().apply([vector.x, vector.y, vector.z])
         return Vector3(float(rotated[0]), float(rotated[1]), float(rotated[2]))
 
+    def scaled(self, factor: float) -> "Quaternion":
+        """Return a rotation about the same axis, ``factor`` times the angle.
+
+        Used to spread one canonical rotation over a chain of rig bones:
+        four bones each taking ``scaled(0.25)`` compose back to the whole
+        rotation, but the chain curves instead of hinging at one joint.
+        """
+
+        rotation_vector = self.to_rotation().as_rotvec() * factor
+
+        return Quaternion.from_rotation(Rotation.from_rotvec(rotation_vector))
+
     def is_unit(self, tolerance: float = 1e-6) -> bool:
         """Return whether the quaternion has unit norm."""
 

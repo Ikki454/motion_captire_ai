@@ -41,6 +41,7 @@ from app.retarget.armature_import import (
     ArmatureDump,
     BoneGroup,
     auto_map,
+    bone_chains_for,
     detect_bone_groups,
     load_armature_dump,
 )
@@ -573,14 +574,15 @@ class ProjectController:
 
     def read_armature(
         self, path: Path
-    ) -> tuple[ArmatureDump, dict, list[BoneGroup]]:
+    ) -> tuple[ArmatureDump, dict, list[BoneGroup], dict]:
         """Read an armature exported from a DCC and work out its structure.
 
         Returns:
             The dump, a canonical-bone to rig-bone mapping covering the
-            roles the heuristic could place confidently, and the bone
-            chains no canonical role uses (fingers, toes, extra spine
-            segments) so the UI can fold them into one row each.
+            roles the heuristic could place confidently, the bone chains
+            no canonical role uses (fingers, toes) so the UI can fold them
+            into one row each, and the runs of bones that play a single
+            canonical role (a multi-segment spine).
 
         Raises:
             ArmatureImportError: The file is missing or malformed.
@@ -589,7 +591,15 @@ class ProjectController:
         dump = load_armature_dump(path)
         mapping = auto_map(dump.bone_names, dump.parents)
         groups = detect_bone_groups(dump.bone_names, dump.parents, mapping)
-        return dump, mapping, groups
+        chains = bone_chains_for(mapping, groups, dump.parents)
+        # A promoted chain is part of its role now, not leftover.
+        promoted = {bone for chain in chains.values() for bone in chain}
+        groups = [
+            group
+            for group in groups
+            if not set(group.members).issubset(promoted)
+        ]
+        return dump, mapping, groups, chains
 
     def add_rig_profile(self, document: dict) -> RigProfileInfo:
         """Install a custom rig profile and make it selectable.

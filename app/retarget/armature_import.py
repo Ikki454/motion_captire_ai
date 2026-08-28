@@ -13,6 +13,7 @@ left out rather than mapped to something plausible-looking.
 
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -250,13 +251,32 @@ def build_profile_document(
     unit_scale: float = 1.0,
     up_axis: str = "Y",
     attachment_points: dict[str, str] | None = None,
+    bone_chains: dict[CanonicalBoneName, tuple[str, ...]] | None = None,
 ) -> dict[str, Any]:
     """Build a rig-profile document ready for ``RigRegistry.install_profile``.
 
     Empty rig-bone names are dropped, so an unfinished mapping still
     produces a valid (partial) profile. ``attachment_points`` is written
     only when it holds something.
+
+    A role listed in ``bone_chains`` is written as a **list** of bones
+    instead of one, and the retargeter splits its rotation between them.
+    The chain is only honoured when its first bone still matches what
+    ``bone_map`` holds for that role, so editing the primary by hand drops
+    a stale chain rather than silently keeping it.
     """
+
+    chains = bone_chains or {}
+    entries: dict[str, Any] = {}
+
+    for canonical, rig_bone in bone_map.items():
+        if not rig_bone.strip():
+            continue
+        chain = chains.get(canonical)
+        if chain and chain[0] == rig_bone:
+            entries[canonical.value] = list(chain)
+        else:
+            entries[canonical.value] = rig_bone
 
     document: dict[str, Any] = {
         "schema_version": 1,
@@ -264,11 +284,7 @@ def build_profile_document(
         "display_name": display_name,
         "up_axis": up_axis,
         "unit_scale": unit_scale,
-        "bone_map": {
-            canonical.value: rig_bone
-            for canonical, rig_bone in bone_map.items()
-            if rig_bone.strip()
-        },
+        "bone_map": entries,
     }
 
     kept = {
@@ -435,6 +451,60 @@ def _group_kind(root: str, children: dict[str, list[str]]) -> str:
         return "fingers"
 
     return "chain"
+
+
+# Canonical roles a rig may legitimately spell as a run of bones. A spine
+# is the common case: rigs give it several segments, the canonical skeleton
+# has one. Limbs are not here -- a rig with two forearm bones is a twist
+# setup, and splitting a rotation across a twist bone is wrong.
+_CHAINABLE_ROLES = frozenset({CanonicalBoneName.SPINE, CanonicalBoneName.NECK})
+
+
+def bone_chains_for(
+    mapping: dict[CanonicalBoneName, str],
+    groups: list[BoneGroup],
+    parents: dict[str, str | None],
+) -> dict[CanonicalBoneName, tuple[str, ...]]:
+    """Extend chainable roles with the straight run of bones above them.
+
+    A rig whose spine is ``spine.001..004`` maps only ``spine.001`` by name;
+    the other three land in a group. They are the same anatomical spine, so
+    they join the role and share its rotation rather than staying rigid.
+
+    Only a **straight** run qualifies: a group that branches is a set of
+    separate chains (fingers), not one longer bone.
+    """
+
+    chains: dict[CanonicalBoneName, tuple[str, ...]] = {}
+
+    for group in groups:
+        role = group.attaches_to
+        primary = mapping.get(role)
+
+        if role not in _CHAINABLE_ROLES or primary is None:
+            continue
+        if group.is_fingers or not _is_straight_run(group, parents):
+            continue
+
+        chains[role] = (primary, *group.members)
+
+    return chains
+
+
+def _is_straight_run(group: BoneGroup, parents: dict[str, str | None]) -> bool:
+    """Return whether a group is one unbranched line of bones.
+
+    A branching group is several chains sharing a parent -- fingers off a
+    hand, or a strap rig -- not one anatomical bone split into segments.
+    Splitting a rotation across those would twist them apart.
+    """
+
+    members = set(group.members)
+    child_counts = Counter(
+        parents.get(member) for member in group.members if parents.get(member) in members
+    )
+
+    return all(count <= 1 for count in child_counts.values())
 
 
 def attachment_points_for(groups: list[BoneGroup]) -> dict[str, str]:
